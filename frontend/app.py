@@ -39,23 +39,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Backend API URL
+# Default to localhost, but can be overridden for WSL
+# If backend is in WSL, use WSL IP: http://172.24.173.114:8000
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+# Try WSL IP if localhost doesn't work (for WSL2)
+WSL_IP = "172.24.173.114"  # Update this if your WSL IP changes
+WSL_BACKEND_URL = f"http://{WSL_IP}:8000"
 
 # Check backend connection on startup
 @st.cache_data(ttl=10)
 def check_backend_connection():
     """Check if backend is accessible"""
+    # Try default URL first
     try:
-        response = requests.get(f"{BACKEND_URL}/health", timeout=3)
-        return response.status_code == 200, response.json() if response.status_code == 200 else None
+        response = requests.get(f"{BACKEND_URL}/health", timeout=5)
+        if response.status_code == 200:
+            return True, response.json(), BACKEND_URL
     except:
-        return False, None
+        pass
+    
+    # If localhost fails, try WSL IP (for WSL2)
+    try:
+        response = requests.get(f"{WSL_BACKEND_URL}/health", timeout=5)
+        if response.status_code == 200:
+            return True, response.json(), WSL_BACKEND_URL
+    except:
+        pass
+    
+    return False, None, None
 
 # Header
 st.markdown('<h1 class="main-header">🧠 Brain Tumor Detection System</h1>', unsafe_allow_html=True)
 
 # Backend status indicator
-backend_ok, backend_info = check_backend_connection()
+backend_ok, backend_info, active_url = check_backend_connection()
 if not backend_ok:
     st.error("⚠️ **Backend API is not accessible!** Please start the backend server first.")
     with st.expander("How to start the backend"):
@@ -72,8 +90,22 @@ cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
         """, language="bash")
         st.info(f"Backend should be running at: `{BACKEND_URL}`")
+        
+        # WSL networking help
+        st.warning("""
+        **If backend is running in WSL:**
+        - Make sure backend binds to `0.0.0.0` (already configured)
+        - Try accessing from Windows using `localhost:8000`
+        - If that doesn't work, find WSL IP: `hostname -I` in WSL
+        - Then set BACKEND_URL environment variable to that IP
+        """)
 else:
+    # Update BACKEND_URL if we're using WSL IP
+    if active_url and active_url != BACKEND_URL:
+        BACKEND_URL = active_url
     st.success(f"✅ Backend connected: {BACKEND_URL}")
+    if backend_info:
+        st.json(backend_info)
 
 st.markdown("---")
 

@@ -9,7 +9,8 @@ env/
 ENV/
 .venv
 
-# Model files (large - optional, comment out if you want to track them)
+# Model files - UNCOMMENTED for Streamlit Cloud deployment
+# Keep model files in repository for deployment
 # models/*.pth
 # *.pth
 
@@ -38,8 +39,8 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Streamlit
-.streamlit/
+# Streamlit - Keep config.toml, ignore secrets
+.streamlit/secrets.toml
 
 # Large data files
 *.zip
